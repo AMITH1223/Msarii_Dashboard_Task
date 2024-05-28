@@ -33,3 +33,8 @@ To load the login page from the URL http://127.0.0.1:8000.
 
 To run the server:
 python manage.py runserver.
+
+for the apis url is:
+http://127.0.0.1:8000/projects for project table.
+http://127.0.0.1:8000/tasks for task table.
+http://127.0.0.1:8000/Notification for notification table.

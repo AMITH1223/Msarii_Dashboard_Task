@@ -1,0 +1,236 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> <!-- Font Awesome for icons -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* CSS for styling */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .filter {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .filter label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .filter select, .filter input[type="date"] {
+            padding: 8px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            color: #444;
+        }
+        .stats-icon {
+            font-size: 24px;
+            color: #4CAF50; /* Green */
+        }
+        .notifications {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f6f6f6;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .notifications h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .notification-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1><i class="fas fa-tasks stats-icon"></i> Manager Dashboard</h1>
+    <div class="filter">
+        <div>
+            <label for="projectFilter">Filter by Project:</label>
+            <select id="projectname" name="projectname">
+                <option value="All">All</option>
+                {% for pname in project_manager_name %}
+                <option value="{{ pname.name }}">{{ pname.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="teamFilter">Filter by Team:</label>
+            <select id="teamname" name="teamname" onchange="sendDataToBackend()">
+                <option value="All">All</option>
+                {% for pteam in project_manager_team %}
+                <option value="{{ pteam.team }}">{{ pteam.team }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <table id="dashboardTable">
+        <thead>
+            <tr>
+                <th><i class="fas fa-tasks stats-icon"></i> Project</th>
+                <th><i class="fas fa-users stats-icon"></i> Team</th>
+                <th><i class="far fa-calendar-alt stats-icon"></i> Start Date</th>
+                <th><i class="fas fa-trophy stats-icon"></i> Progress</th>
+                <th><i class="fas fa-chart-line stats-icon"></i> Team Metrics</th>
+            </tr>
+        </thead>
+        <tbody id="project-tbody">
+            {% for project in project_manager_data %}
+            <tr>
+                <td>{{ project.name }}</td>
+                <td>{{ project.team }}</td>
+                <td>{{ project.created_at }}</td>
+                <td>{{ project.progress }}</td>
+                <td>{{ project.team_metrics }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="notifications">
+        <h2>Notifications</h2>
+        {% for notification in notification_manager_status %}
+            <div class="notification-item">
+                <i class="fas fa-exclamation-circle" style="color: #ff1a1a;"></i> {{ notification.message }}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>
+<script>
+function getCSRFToken() {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken' + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+
+
+
+
+    function sendDataToBackend() {
+    var projectFilterValue = document.getElementById('projectname').value;
+    var teamFilterValue = document.getElementById('teamname').value;
+    var csrfToken = getCSRFToken();
+
+    // Send data to the backend
+    var data = {
+        project: projectFilterValue,
+        team: teamFilterValue
+    };
+    $.ajax({
+        url: "/manager_filter_status/",
+        type: "POST",
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        data: data,
+        success: function(response) {
+            console.log('project1', response.project_manager_data); // Log the project_data from the response
+
+            // Iterate over each project in the response and log its details
+            response.project_manager_data.forEach(function(project) {
+                console.log('project', project);
+            });
+
+            // Assuming you want to update the HTML with the project names
+            updateProjectNames(response.project_manager_data);
+        },
+        error: function(xhr, status, error) {
+            console.error('An error occurred:', error);
+        }
+    });
+}
+
+
+function updateProjectNames(projects) {
+            const tbody = document.getElementById('project-tbody');
+            tbody.innerHTML = ''; // Clear existing rows
+
+            projects.forEach(project => {
+                const row = document.createElement('tr');
+
+                // Create cells for each project property
+                const nameCell = document.createElement('td');
+                nameCell.textContent = project.name;
+
+                const teamCell = document.createElement('td');
+                teamCell.textContent = project.team;
+
+                const createdAtCell = document.createElement('td');
+                createdAtCell.textContent = project.created_at;
+
+                const progressCell = document.createElement('td');
+                progressCell.textContent = project.progress;
+
+                const teamMetricsCell = document.createElement('td');
+                teamMetricsCell.textContent = project.team_metrics;
+
+                // Append cells to the row
+                row.appendChild(nameCell);
+                row.appendChild(teamCell);
+                row.appendChild(createdAtCell);
+                row.appendChild(progressCell);
+                row.appendChild(teamMetricsCell);
+
+                // Append row to the tbody
+                tbody.appendChild(row);
+            });
+        }
+
+
+
+</script>

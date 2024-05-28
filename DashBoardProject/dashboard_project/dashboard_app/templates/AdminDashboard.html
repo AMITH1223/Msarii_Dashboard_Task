@@ -1,0 +1,205 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> <!-- Font Awesome for icons -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* CSS for styling */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .filter {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .filter label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .filter select, .filter input[type="date"] {
+            padding: 8px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            color: #444;
+        }
+        .stats-icon {
+            font-size: 24px;
+            color: #4CAF50; /* Green */
+        }
+        .notifications {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ffe8e8; /* Light Red */
+            border-radius: 5px;
+            border: 1px solid #ff7373; /* Dark Red */
+        }
+        .notifications h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #ff1a1a; /* Dark Red */
+        }
+        .notification-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #ff7373; /* Dark Red */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1><i class="fas fa-chart-line stats-icon"></i> Admin Dashboard</h1>
+    <div class="filter">
+        <div>
+            <label for="statusFilter">Filter by Status:</label>
+            <select id="projectstatus" name="projectstatus" onchange="sendDataToBackend()">
+                <option value="All">All</option>
+                {% for sts in status %}
+                <option value="{{ sts.status }}">{{ sts.status }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <table id="dashboardTable">
+        <thead>
+            <tr>
+                <th><i class="fas fa-users stats-icon"></i> User Count</th>
+                <th><i class="fas fa-tasks stats-icon"></i> Active Projects</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td id="userCount">{{ user_count }}</td>
+                <td id="activeProjects">
+                    <ul>
+                        {% for project in project_data %}
+                            <li>{{ project.name }}</li>
+                        {% endfor %}
+                    </ul>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="notifications">
+        <h2>Notifications</h2>
+        {% for notification in notification_status %}
+            <div class="notification-item">
+                <i class="fas fa-exclamation-circle" style="color: #ff1a1a;"></i> {{ notification.message }}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>
+
+<script>
+    // Function to extract CSRF token from cookies
+    function getCSRFToken() {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken' + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Function to send data to backend
+    function sendDataToBackend() {
+        var selectedStatus = document.getElementById("projectstatus").value;
+        var csrfToken = getCSRFToken(); // Get CSRF token from cookies
+
+        // Send AJAX request with CSRF token included in headers
+        $.ajax({
+            url: "/admin_filter_status/",
+            type: "POST",
+            headers: {
+                "X-CSRFToken": csrfToken
+            },
+            data: {
+                status: selectedStatus
+            },
+            success: function(response) {
+                console.log(response.project_data); // Log the project_data from the response
+
+                // Iterate over each project in the response and log its details
+                response.project_data.forEach(function(project) {
+                    console.log('project', project); 
+                });
+
+                // Assuming you want to update the HTML with the project names
+                updateProjectNames(response.project_data);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+    function updateProjectNames(projects) {
+        var activeProjects = document.getElementById("activeProjects");
+        var ul = document.createElement("ul");
+
+        // Use a Set to store unique project names
+        var uniqueProjectNames = new Set();
+
+        // Iterate over each project and add its name to the Set
+        projects.forEach(function(project) {
+            uniqueProjectNames.add(project.name);
+        });
+
+        // Convert the Set back to an array (to maintain order) and create list items
+        Array.from(uniqueProjectNames).forEach(function(projectName) {
+            var li = document.createElement("li");
+            li.textContent = projectName;
+            ul.appendChild(li);
+        });
+
+        // Clear any existing content and append the new list
+        activeProjects.innerHTML = "";
+        activeProjects.appendChild(ul);
+    }
+</script>
